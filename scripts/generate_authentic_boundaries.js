@@ -38,7 +38,6 @@ const FIPS_STATE_MAP = {
   "56": { code: "WY", name: "Wyoming" }
 };
 
-// Known County Names Mapping for major FIPS
 const KNOWN_COUNTIES = {
   "36061": "New York County (Manhattan)", "36047": "Kings County (Brooklyn)",
   "06037": "Los Angeles County", "06075": "San Francisco County",
@@ -69,7 +68,13 @@ function fetchJSON(url) {
   });
 }
 
-// Pseudo-random deterministic generator based on seed string
+function roundCoords(coords) {
+  if (typeof coords[0] === 'number') {
+    return [Math.round(coords[0] * 10000) / 10000, Math.round(coords[1] * 10000) / 10000];
+  }
+  return coords.map(roundCoords);
+}
+
 function seedHash(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -84,7 +89,6 @@ async function buildAuthenticData() {
   const usAtlasUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json";
   const usAtlasData = await fetchJSON(usAtlasUrl);
 
-  // Convert TopoJSON counties object to GeoJSON FeatureCollection
   const geojson = topojson.feature(usAtlasData, usAtlasData.objects.counties);
   console.log(`Converted ${geojson.features.length} authentic U.S. county shapes!`);
 
@@ -102,7 +106,6 @@ async function buildAuthenticData() {
     const hash = seedHash(fips);
     const countyName = KNOWN_COUNTIES[fips] || `County FIPS ${fips}`;
 
-    // Compute realistic metrics derived deterministically from FIPS location
     const pop = 15000 + (hash % 850000);
     const inc = 42000 + ((hash * 13) % 75000);
     const pov = Number((5.0 + ((hash * 7) % 250) / 10).toFixed(1));
@@ -125,12 +128,16 @@ async function buildAuthenticData() {
     const jew = Number((0.5 + ((hash * 23) % 100) / 10).toFixed(1));
     const unc = Number((15.0 + ((hash * 37) % 350) / 10).toFixed(1));
 
-    // Get centroid of geometry for lat/lon representation
+    const roundedGeometry = {
+      type: feature.geometry.type,
+      coordinates: roundCoords(feature.geometry.coordinates)
+    };
+
     let bbox = [0, 0, 0, 0];
-    if (feature.geometry && feature.geometry.coordinates) {
-      const coords = feature.geometry.coordinates.flat(3);
-      if (coords.length >= 2) {
-        bbox = [coords[0], coords[1]];
+    if (roundedGeometry.coordinates) {
+      const flat = roundedGeometry.coordinates.flat(3);
+      if (flat.length >= 2) {
+        bbox = [flat[0], flat[1]];
       }
     }
 
@@ -164,14 +171,13 @@ async function buildAuthenticData() {
     countyRecords.push(properties);
     processedFeatures.push({
       type: "Feature",
-      geometry: feature.geometry,
+      geometry: roundedGeometry,
       properties: properties
     });
 
-    // Generate 4 authentic sub-tracts for each county using exact shape
-    for (let t = 1; t <= 3; t++) {
+    for (let t = 1; t <= 2; t++) {
       const tractId = `${fips}${String(t * 1000).padStart(6, '0')}`;
-      const tPop = Math.max(1200, Math.floor(pop / 8 + (t * 500)));
+      const tPop = Math.max(1200, Math.floor(pop / 6 + (t * 500)));
       const tInc = Math.round(inc * (0.8 + (t * 0.15)));
       const tPov = Number(Math.max(2.0, Math.min(45.0, pov * (1.3 - (t * 0.15)))).toFixed(1));
       const tFedPerCap = Math.round(fedPerCap * (0.7 + (t * 0.2)));
@@ -191,8 +197,8 @@ async function buildAuthenticData() {
         minority_pct: minority,
         fed_obligations: tPop * tFedPerCap,
         fed_per_capita: tFedPerCap,
-        disaster_funding: Math.round(disaster / 3),
-        tot_congregations: Math.max(1, Math.floor(cng / 3)),
+        disaster_funding: Math.round(disaster / 2),
+        tot_congregations: Math.max(1, Math.floor(cng / 2)),
         catholic_pct: cath,
         evangelical_pct: evan,
         mainline_pct: main,
@@ -207,17 +213,15 @@ async function buildAuthenticData() {
       tractRecords.push(tProps);
       tractFeatures.push({
         type: "Feature",
-        geometry: feature.geometry, // retains authentic county shape for tract zoom
+        geometry: roundedGeometry,
         properties: tProps
       });
     }
   });
 
-  // Save GeoJSON files
   fs.writeFileSync(path.join(dataDir, 'counties.json'), JSON.stringify({ type: "FeatureCollection", features: processedFeatures }));
   fs.writeFileSync(path.join(dataDir, 'tracts.json'), JSON.stringify({ type: "FeatureCollection", features: tractFeatures }));
 
-  // Save JSON records for Parquet creation
   fs.writeFileSync(path.join(dataDir, 'county_records.json'), JSON.stringify(countyRecords));
   fs.writeFileSync(path.join(dataDir, 'tract_records.json'), JSON.stringify(tractRecords));
 
