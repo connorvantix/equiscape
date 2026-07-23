@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { useFilterStore } from '@/lib/store/useFilterStore';
 import { BIVARIATE_PALETTE } from './BivariateLegend';
+import { Eye } from 'lucide-react';
 
 interface MapViewProps {
   filteredRecords: Record<string, any>[];
@@ -15,6 +16,7 @@ export function MapView({ filteredRecords }: MapViewProps) {
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const { resolution, setSelectedFeature, bivariateVarX, bivariateVarY, bivariateMode } = useFilterStore();
   const [geoData, setGeoData] = useState<any>(null);
+  const [fillOpacity, setFillOpacity] = useState<number>(0.35); // Default 35% opacity to show map features clearly
 
   // Fetch GeoJSON template when resolution changes
   useEffect(() => {
@@ -72,6 +74,18 @@ export function MapView({ filteredRecords }: MapViewProps) {
       mapRef.current = null;
     };
   }, []);
+
+  // Dynamically update fill opacity when slider moves
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer('equiscape-fill')) return;
+    map.setPaintProperty('equiscape-fill', 'fill-opacity', [
+      'case',
+      ['boolean', ['get', 'isFilteredOut'], false],
+      0.1,
+      fillOpacity,
+    ]);
+  }, [fillOpacity]);
 
   // Update map source & layer whenever records or geoData update
   useEffect(() => {
@@ -138,8 +152,8 @@ export function MapView({ filteredRecords }: MapViewProps) {
           'fill-opacity': [
             'case',
             ['boolean', ['get', 'isFilteredOut'], false],
-            0.15,
-            0.8,
+            0.1,
+            fillOpacity,
           ],
         },
       });
@@ -149,9 +163,9 @@ export function MapView({ filteredRecords }: MapViewProps) {
         type: 'line',
         source: sourceId,
         paint: {
-          'line-color': '#64748b',
-          'line-width': 0.6,
-          'line-opacity': 0.5,
+          'line-color': '#475569',
+          'line-width': 0.5,
+          'line-opacity': 0.4,
         },
       });
 
@@ -164,7 +178,7 @@ export function MapView({ filteredRecords }: MapViewProps) {
 
         const html = `
           <div className="space-y-1">
-            <h4 className="font-bold text-indigo-300">${props.name || 'Region'} (${props.state || ''})</h4>
+            <h4 className="font-bold text-indigo-300">${props.name || 'Region'}</h4>
             <div className="text-xs space-y-0.5 text-slate-300">
               <p>📍 <strong>Pop:</strong> ${Number(props.total_pop || 0).toLocaleString()}</p>
               <p>💵 <strong>Median Inc:</strong> $${Number(props.median_income || 0).toLocaleString()}</p>
@@ -194,6 +208,23 @@ export function MapView({ filteredRecords }: MapViewProps) {
 
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+      {/* Overlay Map Opacity Control */}
+      <div className="absolute top-3 left-3 z-10 glass-panel px-3 py-1.5 rounded-xl flex items-center space-x-2 text-xs border border-white/10 shadow-lg">
+        <Eye className="h-3.5 w-3.5 text-indigo-400" />
+        <span className="font-medium text-slate-300 text-[11px]">Map Transparency:</span>
+        <input
+          type="range"
+          min="0.1"
+          max="0.8"
+          step="0.05"
+          value={fillOpacity}
+          onChange={(e) => setFillOpacity(parseFloat(e.target.value))}
+          className="w-20 accent-indigo-500 bg-slate-800 rounded cursor-pointer h-1"
+          title="Adjust overlay opacity to see underlying map details"
+        />
+        <span className="font-mono text-[10px] text-indigo-300">{Math.round((1 - fillOpacity) * 100)}% map visible</span>
+      </div>
+
       <div ref={mapContainerRef} className="w-full h-full" />
     </div>
   );

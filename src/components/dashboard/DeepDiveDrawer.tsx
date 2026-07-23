@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useFilterStore } from '@/lib/store/useFilterStore';
-import { X, MapPin, DollarSign, Percent, Church, ShieldAlert, Users } from 'lucide-react';
+import { X, MapPin, DollarSign, Percent, Church, ShieldAlert, Users, Maximize2 } from 'lucide-react';
+import { DeepDiveModal } from './DeepDiveModal';
 
 export function DeepDiveDrawer() {
   const { selectedFeature, setSelectedFeature } = useFilterStore();
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   if (!selectedFeature) return null;
 
@@ -19,6 +21,10 @@ export function DeepDiveDrawer() {
   const fedPerCapita = `$${Number(props.fed_per_capita || 0).toLocaleString()}`;
   const disasterFunding = `$${Number(props.disaster_funding || 0).toLocaleString()}`;
 
+  if (isFullScreen) {
+    return <DeepDiveModal feature={selectedFeature} onClose={() => setIsFullScreen(false)} />;
+  }
+
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-slate-900/95 border-l border-white/10 backdrop-blur-2xl p-6 shadow-2xl overflow-y-auto space-y-6 flex flex-col justify-between">
       <div>
@@ -31,12 +37,22 @@ export function DeepDiveDrawer() {
             <h2 className="text-xl font-extrabold text-slate-100 mt-0.5">{name}</h2>
             {state && <p className="text-xs text-slate-400 font-medium">FIPS: {props.geoid} | State: {state}</p>}
           </div>
-          <button
-            onClick={() => setSelectedFeature(null)}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={() => setIsFullScreen(true)}
+              className="p-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 transition"
+              title="Expand to Fullscreen Analysis"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setSelectedFeature(null)}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Narrative Summary Card */}
@@ -44,8 +60,17 @@ export function DeepDiveDrawer() {
           💡 <strong>Storytelling Insight:</strong> {name} has a population of <strong>{totalPop}</strong> with a median household income of <strong>{medianIncome}</strong> and a poverty rate of <strong>{povertyRate}</strong>. It received <strong>{fedOutlays}</strong> in total federal funding obligations (<strong>{fedPerCapita}</strong> per capita) and contains <strong>{props.tot_congregations || 0}</strong> registered religious congregations.
         </div>
 
+        {/* Expand Fullscreen Button Callout */}
+        <button
+          onClick={() => setIsFullScreen(true)}
+          className="mt-3 w-full py-2 px-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-semibold text-xs flex items-center justify-center space-x-2 transition shadow-md"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+          <span>Expand to Fullscreen Detailed Dashboard</span>
+        </button>
+
         {/* Metric Cards Grid */}
-        <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+        <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
           <div className="glass-panel p-3 rounded-xl border border-white/10 space-y-1">
             <div className="flex items-center space-x-1.5 text-slate-400 font-semibold">
               <Users className="h-3.5 w-3.5 text-blue-400" />
@@ -84,7 +109,7 @@ export function DeepDiveDrawer() {
         </div>
 
         {/* Religious Census Breakdown */}
-        <div className="mt-5 glass-panel p-4 rounded-xl border border-white/10 space-y-2 text-xs">
+        <div className="mt-4 glass-panel p-4 rounded-xl border border-white/10 space-y-2 text-xs">
           <div className="flex items-center justify-between font-bold text-slate-200">
             <div className="flex items-center space-x-1.5">
               <Church className="h-4 w-4 text-purple-400" />
