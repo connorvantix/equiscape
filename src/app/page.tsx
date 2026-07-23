@@ -16,7 +16,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
   const filterState = useFilterStore();
-  const { setGeneratedSql, resolution } = filterState;
+  const { setGeneratedSql } = filterState;
 
   const [records, setRecords] = useState<Record<string, any>[]>([]);
   const [executionTimeMs, setExecutionTimeMs] = useState(0);
@@ -52,6 +52,8 @@ export default function DashboardPage() {
     filterState.religiousMinPct,
     filterState.defcOnly,
     filterState.searchQuery,
+    filterState.selectedCityId,
+    filterState.selectedNeighborhoodId,
     setGeneratedSql,
   ]);
 
@@ -95,7 +97,7 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* Localized Storytelling Deep Dive Drawer */}
+      {/* Localized Storytelling Deep Dive Drawer & Modal */}
       <DeepDiveDrawer />
 
       {/* Bring-Your-Own-Data Upload Modal */}

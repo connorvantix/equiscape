@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useFilterStore } from '@/lib/store/useFilterStore';
-import { Sliders, Filter, DollarSign, Percent, Church, ShieldAlert, RotateCcw } from 'lucide-react';
+import { CITIES } from '@/lib/cities/cityData';
+import { Sliders, DollarSign, Percent, Church, ShieldAlert, RotateCcw, Building2, MapPin } from 'lucide-react';
 
 export function FilterPanel() {
   const {
@@ -18,8 +19,24 @@ export function FilterPanel() {
     setReligiousMinPct,
     defcOnly,
     setDefcOnly,
+    selectedCityId,
+    setSelectedCityId,
+    selectedNeighborhoodId,
+    setSelectedNeighborhoodId,
+    setResolution,
     resetFilters,
   } = useFilterStore();
+
+  const selectedCity = CITIES.find((c) => c.id === selectedCityId);
+
+  const handleCityChange = (cityId: string) => {
+    if (!cityId) {
+      setSelectedCityId(null);
+    } else {
+      setSelectedCityId(cityId);
+      setResolution('tract');
+    }
+  };
 
   return (
     <aside className="glass-panel rounded-2xl p-4 space-y-5 border border-white/10 text-xs w-full">
@@ -35,6 +52,53 @@ export function FilterPanel() {
           <RotateCcw className="h-3 w-3" />
           <span>Reset</span>
         </button>
+      </div>
+
+      {/* City & Neighborhood Selector Controls */}
+      <div className="space-y-2.5 border-b border-white/10 pb-3">
+        <div className="flex items-center space-x-1.5 text-slate-200 font-semibold">
+          <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+          <span>Metropolitan City & Neighborhood</span>
+        </div>
+
+        <div className="space-y-2">
+          <div>
+            <label className="block text-[10px] text-slate-400 mb-1">Target US City</label>
+            <select
+              value={selectedCityId || ''}
+              onChange={(e) => handleCityChange(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1.5 text-slate-200 font-medium"
+            >
+              <option value="">All US Cities & Counties</option>
+              {CITIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}, {c.state}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedCity && (
+            <div>
+              <label className="block text-[10px] text-indigo-300 mb-1 font-semibold flex items-center space-x-1">
+                <MapPin className="h-3 w-3 text-indigo-400" />
+                <span>Select Neighborhood in {selectedCity.name}</span>
+              </label>
+              <select
+                value={selectedNeighborhoodId || ''}
+                onChange={(e) => setSelectedNeighborhoodId(e.target.value || null)}
+                className="w-full bg-indigo-950/80 border border-indigo-500/50 rounded-lg px-2 py-1.5 text-indigo-200 font-medium"
+              >
+                <option value="">All Neighborhoods in {selectedCity.name}</option>
+                {selectedCity.neighborhoods.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Median Household Income Slider */}

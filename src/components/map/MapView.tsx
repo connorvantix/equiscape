@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { useFilterStore } from '@/lib/store/useFilterStore';
+import { CITIES } from '@/lib/cities/cityData';
 import { BIVARIATE_PALETTE } from './BivariateLegend';
 import { Eye } from 'lucide-react';
 
@@ -14,7 +15,15 @@ export function MapView({ filteredRecords }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
-  const { resolution, setSelectedFeature, bivariateVarX, bivariateVarY, bivariateMode } = useFilterStore();
+  const {
+    resolution,
+    setSelectedFeature,
+    bivariateVarX,
+    bivariateVarY,
+    bivariateMode,
+    selectedCityId,
+    selectedNeighborhoodId,
+  } = useFilterStore();
   const [geoData, setGeoData] = useState<any>(null);
   const [fillOpacity, setFillOpacity] = useState<number>(0.35); // Default 35% opacity to show map features clearly
 
@@ -74,6 +83,49 @@ export function MapView({ filteredRecords }: MapViewProps) {
       mapRef.current = null;
     };
   }, []);
+
+  // Fly to selected city or neighborhood when selection changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (selectedNeighborhoodId && selectedCityId) {
+      const city = CITIES.find((c) => c.id === selectedCityId);
+      const neigh = city?.neighborhoods.find((n) => n.id === selectedNeighborhoodId);
+      if (neigh) {
+        map.flyTo({
+          center: neigh.center,
+          zoom: 13.5,
+          essential: true,
+          duration: 2000,
+        });
+        return;
+      }
+    }
+
+    if (selectedCityId) {
+      const city = CITIES.find((c) => c.id === selectedCityId);
+      if (city) {
+        map.flyTo({
+          center: city.center,
+          zoom: city.zoom,
+          essential: true,
+          duration: 2000,
+        });
+        return;
+      }
+    }
+
+    // Default nationwide view if reset
+    if (!selectedCityId && !selectedNeighborhoodId) {
+      map.flyTo({
+        center: [-98.5795, 39.8283],
+        zoom: 3.8,
+        essential: true,
+        duration: 1800,
+      });
+    }
+  }, [selectedCityId, selectedNeighborhoodId]);
 
   // Dynamically update fill opacity when slider moves
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { CITIES } from '../cities/cityData';
 
 export type GeoResolution = 'county' | 'tract';
 
@@ -14,6 +15,8 @@ export interface FilterState {
   bivariateVarX: string;
   bivariateVarY: string;
   searchQuery: string;
+  selectedCityId: string | null;
+  selectedNeighborhoodId: string | null;
   activeStoryId: string | null;
   selectedFeature: any | null;
   generatedSql: string;
@@ -29,6 +32,8 @@ export interface FilterState {
   setBivariateMode: (val: boolean) => void;
   setBivariateVars: (x: string, y: string) => void;
   setSearchQuery: (q: string) => void;
+  setSelectedCityId: (cityId: string | null) => void;
+  setSelectedNeighborhoodId: (neighId: string | null) => void;
   setActiveStoryId: (id: string | null) => void;
   setSelectedFeature: (feature: any | null) => void;
   setGeneratedSql: (sql: string) => void;
@@ -47,6 +52,8 @@ export const INITIAL_VALUES = {
   bivariateVarX: 'poverty_ratio',
   bivariateVarY: 'fed_per_capita',
   searchQuery: '',
+  selectedCityId: null as string | null,
+  selectedNeighborhoodId: null as string | null,
   activeStoryId: null as string | null,
   selectedFeature: null as any | null,
   generatedSql: '',
@@ -55,6 +62,29 @@ export const INITIAL_VALUES = {
 export function buildDuckDBSql(state: FilterState | typeof INITIAL_VALUES) {
   const table = state.resolution === 'county' ? 'counties' : 'tracts';
   const conditions: string[] = [];
+
+  // City & Neighborhood filtering
+  if (state.selectedCityId) {
+    const city = CITIES.find((c) => c.id === state.selectedCityId);
+    if (city && city.countyFips.length > 0) {
+      if (state.resolution === 'county') {
+        const fipsList = city.countyFips.map((f) => `'${f}'`).join(',');
+        conditions.push(`geoid IN (${fipsList})`);
+      } else {
+        const fipsConditions = city.countyFips.map((f) => `county_geoid = '${f}'`).join(' OR ');
+        conditions.push(`(${fipsConditions})`);
+      }
+    }
+  }
+
+  if (state.selectedNeighborhoodId && state.selectedCityId) {
+    const city = CITIES.find((c) => c.id === state.selectedCityId);
+    const neigh = city?.neighborhoods.find((n) => n.id === state.selectedNeighborhoodId);
+    if (neigh) {
+      const qName = neigh.name.split('/')[0].trim().replace(/'/g, "''");
+      conditions.push(`name ILIKE '%${qName}%'`);
+    }
+  }
 
   const inc = state.incomeRange || [25000, 150000];
   if (inc[0] > 25000 || inc[1] < 150000) {
@@ -100,6 +130,8 @@ export const useFilterStore = create<FilterState>((set) => ({
   setBivariateMode: (val: boolean) => set({ bivariateMode: val }),
   setBivariateVars: (x: string, y: string) => set({ bivariateVarX: x, bivariateVarY: y }),
   setSearchQuery: (q: string) => set({ searchQuery: q }),
+  setSelectedCityId: (cityId: string | null) => set({ selectedCityId: cityId, selectedNeighborhoodId: null }),
+  setSelectedNeighborhoodId: (neighId: string | null) => set({ selectedNeighborhoodId: neighId }),
   setActiveStoryId: (id: string | null) => set({ activeStoryId: id }),
   setSelectedFeature: (feature: any | null) => set({ selectedFeature: feature }),
   setGeneratedSql: (sql: string) => set({ generatedSql: sql }),
