@@ -4,6 +4,21 @@ let dbInstance: duckdb.AsyncDuckDB | null = null;
 let connInstance: duckdb.AsyncDuckDBConnection | null = null;
 let initPromise: Promise<{ db: duckdb.AsyncDuckDB; conn: duckdb.AsyncDuckDBConnection }> | null = null;
 
+function sanitizeRecord(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return Number(obj);
+  if (Array.isArray(obj)) return obj.map(sanitizeRecord);
+  if (typeof obj === 'object') {
+    const cleaned: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      cleaned[key] = typeof val === 'bigint' ? Number(val) : sanitizeRecord(val);
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 export async function getDuckDB() {
   if (dbInstance && connInstance) {
     return { db: dbInstance, conn: connInstance };
@@ -89,7 +104,7 @@ export async function runQuery(sqlQuery: string): Promise<Record<string, any>[]>
   try {
     const { conn } = await getDuckDB();
     const result = await conn.query(sqlQuery);
-    return result.toArray().map((row) => row.toJSON());
+    return result.toArray().map((row) => sanitizeRecord(row.toJSON()));
   } catch (err) {
     console.error('DuckDB Query Error:', err, 'Query:', sqlQuery);
     return [];

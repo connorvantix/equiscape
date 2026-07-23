@@ -22,30 +22,30 @@ interface ChartsContainerProps {
 export function ChartsContainer({ records }: ChartsContainerProps) {
   // Aggregate Top 8 regions by Federal Per Capita spending
   const topSpendingData = [...records]
-    .sort((a, b) => (b.fed_per_capita || 0) - (a.fed_per_capita || 0))
+    .sort((a, b) => Number(b.fed_per_capita || 0) - Number(a.fed_per_capita || 0))
     .slice(0, 8)
     .map((r) => ({
       name: (r.name || 'Region').split(',')[0],
-      fedPerCap: r.fed_per_capita || 0,
-      poverty: r.poverty_ratio || 0,
-      income: r.median_income || 0,
+      fedPerCap: Number(r.fed_per_capita || 0),
+      poverty: Number(r.poverty_ratio || 0),
+      income: Number(r.median_income || 0),
     }));
 
   // Scatter plot data for Minority % vs Federal Per Capita
   const scatterData = records.slice(0, 30).map((r) => ({
-    x: r.minority_pct || 0,
-    y: r.fed_per_capita || 0,
-    z: r.total_pop || 1000,
+    x: Number(r.minority_pct || 0),
+    y: Number(r.fed_per_capita || 0),
+    z: Number(r.total_pop || 1000),
     name: r.name,
   }));
 
   // Calculate average religious adherence breakdown across current filtered dataset
-  const avgCatholic = Math.round(records.reduce((acc, r) => acc + (r.catholic_pct || 0), 0) / Math.max(1, records.length));
-  const avgEvan = Math.round(records.reduce((acc, r) => acc + (r.evangelical_pct || 0), 0) / Math.max(1, records.length));
-  const avgMain = Math.round(records.reduce((acc, r) => acc + (r.mainline_pct || 0), 0) / Math.max(1, records.length));
-  const avgBlackProt = Math.round(records.reduce((acc, r) => acc + (r.black_prot_pct || 0), 0) / Math.max(1, records.length));
-  const avgMuslim = Math.round(records.reduce((acc, r) => acc + (r.muslim_pct || 0), 0) / Math.max(1, records.length));
-  const avgUnclaimed = Math.round(records.reduce((acc, r) => acc + (r.unclaimed_pct || 0), 0) / Math.max(1, records.length));
+  const avgCatholic = Math.round(records.reduce((acc, r) => acc + Number(r.catholic_pct || 0), 0) / Math.max(1, records.length));
+  const avgEvan = Math.round(records.reduce((acc, r) => acc + Number(r.evangelical_pct || 0), 0) / Math.max(1, records.length));
+  const avgMain = Math.round(records.reduce((acc, r) => acc + Number(r.mainline_pct || 0), 0) / Math.max(1, records.length));
+  const avgBlackProt = Math.round(records.reduce((acc, r) => acc + Number(r.black_prot_pct || 0), 0) / Math.max(1, records.length));
+  const avgMuslim = Math.round(records.reduce((acc, r) => acc + Number(r.muslim_pct || 0), 0) / Math.max(1, records.length));
+  const avgUnclaimed = Math.round(records.reduce((acc, r) => acc + Number(r.unclaimed_pct || 0), 0) / Math.max(1, records.length));
 
   const religionChartData = [
     { group: 'Catholic', pct: avgCatholic, fill: '#8b5cf6' },
